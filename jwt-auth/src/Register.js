@@ -1,54 +1,57 @@
-import React, { useState } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import TextField from "@material-ui/core/TextField";
-import Button from "@material-ui/core/Button";
-import { useHistory, Link } from "react-router-dom";
-import axiox from "axios";
+import React, { useState, useEffect } from 'react';
+import { makeStyles } from '@material-ui/core/styles';
+import TextField from '@material-ui/core/TextField';
+import Button from '@material-ui/core/Button';
+import { useHistory, Link } from 'react-router-dom';
+import { useRegisterUserMutation } from './services/authApi';
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    "& > *": {
+    '& > *': {
       margin: theme.spacing(1),
-      width: "45ch",
+      width: '45ch',
     },
   },
 }));
 
 const Register = ({ setLogoutUser }) => {
   const classes = useStyles();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   let history = useHistory();
+  const [registerUser, { data, isError, error }] = useRegisterUserMutation();
 
-  const register = (e) => {
+  useEffect(() => {
+    if (data && data.access_token) {
+      localStorage.setItem(
+        'login',
+        JSON.stringify({
+          userLogin: true,
+          token: data.access_token,
+        }),
+      );
+      setErrorMsg('');
+      setEmail('');
+      setPassword('');
+      setLogoutUser(false);
+      history.push('/');
+    }
+
+    if (isError) {
+      setErrorMsg(error.data.message);
+    }
+  }, [data, isError]);
+
+  const register = async (e) => {
     e.preventDefault();
-    axiox
-      .post("http://localhost:5000/api/auth/register", {
-        email,
-        password,
-      })
-      .then((response) => {
-        console.log("response", response);
-        localStorage.setItem(
-          "login",
-          JSON.stringify({
-            userLogin: true,
-            token: response.data.access_token,
-          })
-        );
-        setError("");
-        setEmail("");
-        setPassword("");
-        setLogoutUser(false);
-        history.push("/");
-      })
-      .catch((error) => setError(error.response.data.message));
+    await registerUser({ email, password });
   };
+
   return (
-    <div style={{ marginTop: "100px" }}>
+    <div style={{ marginTop: '100px' }}>
       <h2>Register Page</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
       <form
         className={classes.root}
         noValidate
@@ -72,7 +75,7 @@ const Register = ({ setLogoutUser }) => {
         />
         <br />
         <Button
-          style={{ width: "100px" }}
+          style={{ width: '100px' }}
           variant="contained"
           color="primary"
           type="submit"
